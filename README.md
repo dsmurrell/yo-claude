@@ -166,6 +166,37 @@ pip uninstall yo-claude
 rm -rf ~/.yo-claude
 ```
 
+## Development
+
+### Building and uploading to PyPI
+
+```bash
+# Bump version in pyproject.toml and src/yo_claude/__init__.py first
+./build_and_upload.sh
+```
+
+You'll need a PyPI API token. Create one at https://pypi.org/manage/account/token/ and either enter it when prompted (username: `__token__`, password: your token) or save it to `~/.pypirc`:
+
+```ini
+[pypi]
+username = __token__
+password = pypi-XXXXX...
+```
+
+### Installing from source
+
+```bash
+git clone https://github.com/dsmurrell/yo-claude.git
+cd yo-claude
+pip install -e .
+```
+
+## Gotchas
+
+- **pyenv shim issues**: If you see `/Users/you/.pyenv/shims/yo-claude` instead of the actual binary, run `pyenv rehash` after installing.
+- **macOS permission dialogs**: On first run, macOS may ask for permission to access Documents or Apple Music. This is the `claude` CLI (a Node.js app) triggering macOS sandbox checks. Click through them - they only appear once.
+- **macOS Login Items**: The scheduler shows as "python3.x - Item from unidentified developer" in System Settings → General → Login Items. This is normal for Python-based LaunchAgents.
+
 ## Platform notes
 
 ### macOS

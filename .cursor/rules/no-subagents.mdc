@@ -1,0 +1,6 @@
+---
+description: Avoid subagents, do all work sequentially in the main agent
+alwaysApply: true
+---
+
+Don't use any subagents, do everything in sequence.

@@ -18,9 +18,8 @@ LAUNCHAGENT_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
     <string>com.yo-claude</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{python_path}</string>
-        <string>-m</string>
-        <string>yo_claude</string>
+        <string>{yo_claude_path}</string>
+        <string>run</string>
     </array>
     <key>EnvironmentVariables</key>
     <dict>
@@ -47,6 +46,23 @@ def get_launchagent_path() -> Path:
     return Path.home() / "Library" / "LaunchAgents" / "com.yo-claude.plist"
 
 
+def find_yo_claude_script() -> str:
+    """Find the yo-claude entry point script.
+
+    Prefers the script over python -m because it has the correct shebang
+    baked in, making it robust across pyenv/pipx/venv boundaries.
+    """
+    import shutil
+
+    script_path = shutil.which("yo-claude")
+    if script_path:
+        return script_path
+
+    # Fallback: use the Python that's currently running this code
+    # (which is the correct one since we're inside the yo-claude process)
+    return f"{sys.executable} -m yo_claude"
+
+
 def install_macos(config: Config) -> Tuple[bool, str]:
     """Install LaunchAgent on macOS."""
     import os
@@ -54,15 +70,14 @@ def install_macos(config: Config) -> Tuple[bool, str]:
     plist_path = get_launchagent_path()
     plist_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Get paths - capture user's PATH so claude (node) works
-    python_path = sys.executable
+    yo_claude_path = find_yo_claude_script()
     log_path = Path.home() / ".yo-claude" / "yo-claude.log"
     interval_seconds = config.check_interval * 60
     user_path = os.environ.get("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
 
     # Write plist
     plist_content = LAUNCHAGENT_PLIST.format(
-        python_path=python_path, interval_seconds=interval_seconds, log_path=log_path, user_path=user_path
+        yo_claude_path=yo_claude_path, interval_seconds=interval_seconds, log_path=log_path, user_path=user_path
     )
     plist_path.write_text(plist_content, encoding="utf-8")
 
@@ -101,7 +116,7 @@ Description=yo-claude session timer helper
 
 [Service]
 Type=oneshot
-ExecStart={python_path} -m yo_claude
+ExecStart={yo_claude_path} run
 """
 
 SYSTEMD_TIMER = """[Unit]
@@ -130,10 +145,10 @@ def install_linux(config: Config) -> Tuple[bool, str]:
     service_path = systemd_dir / "yo-claude.service"
     timer_path = systemd_dir / "yo-claude.timer"
 
-    python_path = sys.executable
+    yo_claude_path = find_yo_claude_script()
 
     # Write service file
-    service_content = SYSTEMD_SERVICE.format(python_path=python_path)
+    service_content = SYSTEMD_SERVICE.format(yo_claude_path=yo_claude_path)
     service_path.write_text(service_content, encoding="utf-8")
 
     # Write timer file
@@ -188,7 +203,7 @@ def get_task_name() -> str:
 
 def install_windows(config: Config) -> Tuple[bool, str]:
     """Install Windows scheduled task."""
-    python_path = sys.executable
+    yo_claude_path = find_yo_claude_script()
     task_name = get_task_name()
 
     # Delete existing task if present (ignore errors)
@@ -203,7 +218,7 @@ def install_windows(config: Config) -> Tuple[bool, str]:
             "/tn",
             task_name,
             "/tr",
-            f'"{python_path}" -m yo_claude',
+            f'"{yo_claude_path}" run',
             "/sc",
             "minute",
             "/mo",
